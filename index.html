@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jukebox — Minecraft Music Discs</title>
+<style>
+:root{--bg:#0b0e0c;--panel:#121713;--panel2:#182019;--line:#303a31;--text:#edf3ed;--muted:#9aa89c;--green:#7ed957;--gold:#e7c66a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#27352a 0,#0b0e0c 42%);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:48px 22px 32px;text-align:center;border-bottom:1px solid var(--line)}.pixel{font-family:monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:800}
+h1{font-size:clamp(34px,7vw,64px);margin:8px 0;letter-spacing:-.04em}header p{color:var(--muted);max-width:680px;margin:auto;font-size:16px;line-height:1.5}.wrap{max-width:1180px;margin:auto;padding:24px 18px 70px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}input,select{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;outline:none}input{flex:1;min-width:220px}input:focus,select:focus{border-color:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:14px}.card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:17px;transition:transform .18s,border-color .18s;position:relative;overflow:hidden}.card:hover{transform:translateY(-3px);border-color:#526454}
+.disc{width:112px;height:112px;margin:0 auto 14px;display:grid;place-items:center;cursor:pointer;user-select:none;filter:drop-shadow(0 8px 12px #0008);transition:transform .18s ease;position:relative;border:0;background:transparent;padding:0}.disc:hover{transform:translateY(-4px) scale(1.04)}.disc:focus-visible{outline:2px solid var(--green);outline-offset:5px;border-radius:8px}.disc.playing{animation:discBounce .55s ease-in-out infinite alternate}.disc img{width:100%;height:100%;image-rendering:pixelated;object-fit:contain}.disc .playstate{position:absolute;right:-3px;bottom:-3px;background:var(--green);color:#10150f;border:2px solid var(--panel);border-radius:50%;width:27px;height:27px;display:none;place-items:center;font-size:13px;font-weight:900}.disc.playing .playstate{display:grid}@keyframes discBounce{from{transform:translateY(0) rotate(-2deg)}to{transform:translateY(-10px) rotate(2deg)}}
+h2{font-size:20px;margin:0 0 3px}.composer{color:var(--gold);font-weight:650}.meta{display:flex;justify-content:space-between;color:var(--muted);margin:12px 0;font-size:13px}.desc{color:#c4cec5;line-height:1.5;min-height:68px}.tag{display:inline-block;border:1px solid #405044;border-radius:999px;padding:4px 8px;color:#b8c7ba;font-size:11px;margin-bottom:12px}a{display:inline-block;color:var(--green);text-decoration:none;font-weight:700}a:hover{text-decoration:underline}.empty{text-align:center;padding:50px;color:var(--muted);display:none}footer{text-align:center;color:#69746b;font-size:12px;padding-top:28px}.status{margin:0 0 18px;color:var(--muted);font-size:13px;min-height:18px}.status.error{color:#ff9b91}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header><div class="pixel">♫ Jukebox Archive</div><h1>Minecraft Music Discs</h1><p>Browse Minecraft records and click a disc to play it. Click a playing disc again to stop it. Multiple records can play together.</p></header>
+<main class="wrap">
+<div class="toolbar"><input id="search" placeholder="Search discs or composers…" aria-label="Search discs or composers"><select id="composer" aria-label="Filter by composer"><option value="">All composers</option></select><select id="sort" aria-label="Sort discs"><option value="name">Name</option><option value="length">Length</option><option value="composer">Composer</option></select></div>
+<div id="status" class="status" role="status" aria-live="polite">Audio and sprites load from Minecraft 26.3 assets.</div><section id="grid" class="grid"></section><div id="empty" class="empty">No discs match your search.</div><footer>Unofficial fan-made reference. Minecraft is a trademark of Mojang Studios. Wiki links point to minecraft.wiki, not Fandom.</footer>
+</main>
+<script>
+'use strict';
+const ASSET_BASE='https://assets.mcasset.cloud/26.3/assets/minecraft/';
+const wiki='https://minecraft.wiki/w/Music_Disc';
+// [name, composer, length, obtained, description, family, audio filename, sprite filename]
+const discs=[
+['13','C418','2:56','Creeper killed by a skeleton arrow; dungeon chests','An eerie, atmospheric classic with unsettling sounds.','c418','13.ogg','music_disc_13.png'],
+['Cat','C418','3:05','Creeper killed by a skeleton arrow; dungeon chests','A cheerful, instantly recognizable Minecraft classic.','c418','cat.ogg','music_disc_cat.png'],
+['Blocks','C418','5:45','Creeper killed by a skeleton arrow; dungeon chests','A bright, nostalgic track with a relaxed groove.','c418','blocks.ogg','music_disc_blocks.png'],
+['Chirp','C418','3:05','Creeper killed by a skeleton arrow; dungeon chests','A playful, vintage-sounding melody.','c418','chirp.ogg','music_disc_chirp.png'],
+['Far','C418','3:12','Creeper killed by a skeleton arrow; dungeon chests','Dreamy and spacious, with a gentle electronic pulse.','c418','far.ogg','music_disc_far.png'],
+['Mall','C418','3:18','Creeper killed by a skeleton arrow; dungeon chests','A mellow, reflective track built around soft synth textures.','c418','mall.ogg','music_disc_mall.png'],
+['Mellohi','C418','1:36','Creeper killed by a skeleton arrow; dungeon chests','Slow, slightly haunting music with a distinctive melody.','c418','mellohi.ogg','music_disc_mellohi.png'],
+['Stal','C418','2:32','Creeper killed by a skeleton arrow; dungeon chests','A laid-back jazz-inspired track featuring saxophone.','c418','stal.ogg','music_disc_stal.png'],
+['Strad','C418','3:08','Creeper killed by a skeleton arrow; dungeon chests','A warm, tropical-tinged track with a memorable melody.','c418','strad.ogg','music_disc_strad.png'],
+['Ward','C418','4:11','Creeper killed by a skeleton arrow; dungeon chests','A darker track that begins with a sample of Chopin.','c418','ward.ogg','music_disc_ward.png'],
+['11','C418','1:11','Creeper killed by a skeleton arrow; dungeon chests','A damaged, unsettling recording with footsteps and strange sounds.','c418','11.ogg','music_disc_11.png'],
+['Wait','C418','3:58','Creeper killed by a skeleton arrow; dungeon chests','A mellow remix of the Minecraft title theme.','c418','wait.ogg','music_disc_wait.png'],
+['Pigstep','Lena Raine','2:28','Bastion remnant chests','A punchy, hip-hop-influenced Nether anthem.','lena','pigstep.ogg','music_disc_pigstep.png'],
+['otherside','Lena Raine','3:15','Dungeon, stronghold and ancient city chests','A bright, energetic track with an emotional build.','lena','otherside.ogg','music_disc_otherside.png'],
+['5','Samuel Åberg','2:58','Crafted from 9 disc fragments in an ancient city','A fragmented, eerie composition built around a warped soundscape.','samuel','5.ogg','music_disc_5.png'],
+['Relic','Aaron Cherof','3:39','Suspicious gravel in trail ruins','A lo-fi 8-bit track that nods to Minecraft Legends.','aaron','relic.ogg','music_disc_relic.png'],
+['Creator','Lena Raine','2:56','Ominous vaults in trial chambers','A short, melodic piece with a music-box opening.','lena','creator.ogg','music_disc_creator.png'],
+['Creator (Music Box)','Lena Raine','1:13','Decorated pots in trial chambers','A delicate music-box version of Creator.','lena','creator_music_box.ogg','music_disc_creator_music_box.png'],
+['Precipice','Aaron Cherof','4:59','Vaults in trial chambers','A dynamic, progressive track that grows into a big finale.','aaron','precipice.ogg','music_disc_precipice.png'],
+['Tears','Amos Roddy','2:55','Dropped by a ghast when its fireball is reflected back','A haunting track inspired by the sounds and atmosphere of the Nether.','amos','tears.ogg','music_disc_tears.png'],
+['Lava Chicken','Hyper Potions','2:15','Dropped by a chicken jockey','A playful remix of the viral Lava Chicken song.','hyper','lava_chicken.ogg','music_disc_lava_chicken.png'],
+['Bounce','Aaron Cherof','2:??','Found in trial chambers','A newer Minecraft music disc with a bouncy, energetic sound.','aaron','bounce.ogg','music_disc_bounce.png']
+];
+const grid=document.getElementById('grid'),empty=document.getElementById('empty'),search=document.getElementById('search'),composer=document.getElementById('composer'),sort=document.getElementById('sort'),status=document.getElementById('status');
+const playing=new Map();
+const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+[...new Set(discs.map(d=>d[1]))].sort().forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;composer.appendChild(o)});
+function seconds(t){const m=String(t).match(/^(\d+):(\d+)$/);return m?Number(m[1])*60+Number(m[2]):0}
+function stopDisc(key){const item=playing.get(key);if(!item)return;item.audio.pause();item.audio.currentTime=0;playing.delete(key);document.querySelectorAll('.disc').forEach(b=>{if(b.dataset.key===key){b.classList.remove('playing');b.setAttribute('aria-pressed','false');b.querySelector('.playstate').textContent='▶';const label=b.closest('.card').querySelector('.meta span:last-child');if(label)label.textContent='▶ Play disc'}})}
+function setStatus(message,isError=false){status.textContent=message;status.classList.toggle('error',isError)}
+function toggleDisc(d,button){const key=d[6];if(playing.has(key)){stopDisc(key);setStatus('Stopped '+d[0]+'.');return}
+ const audio=new Audio(ASSET_BASE+'sounds/records/'+encodeURIComponent(d[6]));audio.preload='none';audio.loop=false;
+ const onError=()=>{if(playing.has(key))stopDisc(key);setStatus('Could not load '+d[0]+' from the Minecraft 26.3 assets. Check the connection or asset filename.',true)};
+ audio.addEventListener('error',onError,{once:true});audio.addEventListener('ended',()=>{if(playing.has(key))stopDisc(key);},{once:true});
+ // Start the track directly in the click handler to comply with browser audio policies.
+ const promise=audio.play();
+ if(promise&&typeof promise.then==='function')promise.then(()=>{playing.set(key,{audio,button});button.classList.add('playing');button.setAttribute('aria-pressed','true');button.querySelector('.playstate').textContent='Ⅱ';button.closest('.card').querySelector('.meta span:last-child').textContent='♫ Playing';setStatus('Playing '+d[0]+'. You can start another disc at the same time.');}).catch(()=>{setStatus('Could not play '+d[0]+'. The 26.3 audio asset may be unavailable or blocked by the browser.',true)});
+ else{playing.set(key,{audio,button});button.classList.add('playing');button.setAttribute('aria-pressed','true')}
+}
+function render(){const q=search.value.trim().toLowerCase(),c=composer.value;let arr=discs.filter(d=>(!q||d[0].toLowerCase().includes(q)||d[1].toLowerCase().includes(q)||d[4].toLowerCase().includes(q))&&(!c||d[1]===c));arr.sort((a,b)=>sort.value==='length'?seconds(b[2])-seconds(a[2]):sort.value==='composer'?a[1].localeCompare(b[1]):a[0].localeCompare(b[0]));grid.innerHTML='';arr.forEach(d=>{const card=document.createElement('article');card.className='card';const key=d[6],isPlaying=playing.has(key);card.innerHTML=`<button class="disc${isPlaying?' playing':''}" type="button" title="${isPlaying?'Stop':'Play'} ${esc(d[0])}" aria-label="${isPlaying?'Stop':'Play'} ${esc(d[0])}" aria-pressed="${isPlaying}" data-key="${esc(key)}"><img loading="lazy" src="${ASSET_BASE}textures/item/${encodeURIComponent(d[7])}" alt="${esc(d[0])} music disc sprite"><span class="playstate">${isPlaying?'Ⅱ':'▶'}</span></button><span class="tag">${esc(d[5].toUpperCase())}</span><h2>${esc(d[0])}</h2><div class="composer">${esc(d[1])}</div><div class="meta"><span>⏱ ${esc(d[2])}</span><span>${isPlaying?'♫ Playing':'▶ Play disc'}</span></div><div class="desc">${esc(d[4])}</div><p><strong>Obtained:</strong> ${esc(d[3])}</p><a href="${wiki}" target="_blank" rel="noopener noreferrer">Official Minecraft Wiki ↗</a>`;grid.appendChild(card);const btn=card.querySelector('.disc');btn.addEventListener('click',()=>toggleDisc(d,btn));const img=btn.querySelector('img');img.addEventListener('error',()=>{img.alt='Sprite unavailable for '+d[0];img.style.visibility='hidden';setStatus('Some sprites may not exist at this version/path. Audio controls remain available.',true)},{once:true})});empty.style.display=arr.length?'none':'block'}
+[search,composer,sort].forEach(el=>el.addEventListener('input',render));render();
+</script>
+</body>
+</html>
